@@ -20,8 +20,7 @@ from transformers import CLIPProcessor, CLIPModel
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from utils._api_keys import OPENAI_API_KEY
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 # Task instance counts for different task types
 TASK_INSTANCE_COUNT_DICT = {

@@ -11,17 +11,15 @@ from typing import Any, Dict, List, Optional
 from openai import OpenAI
 from PIL import Image
 
-from utils._api_keys import (
-    CLAUDE_API_KEY,
-    CLAUDE_BASE_URL,
-    GEMINI_API_KEY,
-    GEMINI_BASE_URL,
-    MESHY_API_KEY,
-    OPENAI_API_KEY,
-    OPENAI_BASE_URL,
-    QWEN_BASE_URL,
-    VA_API_KEY,
-)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
+CLAUDE_BASE_URL = os.environ.get("CLAUDE_BASE_URL", "https://api.anthropic.com/v1")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_BASE_URL = os.environ.get("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+QWEN_BASE_URL = os.environ.get("QWEN_BASE_URL", "http://localhost:8000/v1")
+MESHY_API_KEY = os.environ.get("MESHY_API_KEY", "")
+VA_API_KEY = os.environ.get("VA_API_KEY", "")
 
 def get_model_response(client: OpenAI, chat_args: Dict, num_candidates: int) -> List[Any]:
     """Get model responses with retry logic.

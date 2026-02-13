@@ -64,38 +64,53 @@ git clone https://github.com/Fugtemypt123/VIGA-release.git && cd VIGA-release
 git submodule update --init --recursive
 ```
 
-### Create conda environments
+### Set up conda environments
 
-VIGA requires separate environments for the agent and tools.
+VIGA requires separate conda environments for the agent and tools. The setup script creates all of them automatically:
 
 ```bash
-conda create -n agent python=3.10 -y && conda activate agent
-pip install -r requirements/requirement_agent.txt
+./setup.sh
+```
 
-conda create -n blender python=3.11 -y && conda activate blender
-pip install -r requirements/requirement_blender.txt
+This creates 5 conda environments (all prefixed with `viga-`):
 
-conda create -n sam python=3.10 -y && conda activate sam
-pip install -r requirements/requirement_sam.txt
+| Environment | Python | Purpose |
+|---|---|---|
+| `viga-agent` | 3.10 | Main agent runtime |
+| `viga-blender` | 3.11 | Blender/Infinigen tools |
+| `viga-sam3d-objects` | 3.11 | SAM-3D with CUDA extensions |
+| `viga-sam` | 3.10 | Segment Anything (SAM) |
+| `viga-sam3` | 3.11 | SAM 3 |
 
-conda create -n sam3d python=3.11 -y && conda activate sam3d
-pip install -r requirements/requirement_sam3d-objects.txt
+The script also generates `utils/_path.py` (environment path mappings) and downloads required model checkpoints.
+
+To set up only specific environments:
+
+```bash
+./setup.sh agent blender        # only these two
+```
+
+To verify all environments are working:
+
+```bash
+./setup.sh --check
 ```
 
 See [Requirements](requirements/README.md) for additional options.
 
 ### Configure API keys
 
-```bash
-cp utils/_api_keys.py.example utils/_api_keys.py
-```
+Set API keys as environment variables:
 
-Edit `utils/_api_keys.py` and add your `OPENAI_API_KEY` and `MESHY_API_KEY`.
+```bash
+export OPENAI_API_KEY=sk-...
+export CLAUDE_API_KEY=sk-ant-...
+```
 
 ## 2. Usage: Run the agent
 
 ```bash
-conda activate agent
+conda activate viga-agent
 python runners/dynamic_scene.py --task=artist --model=gpt-5
 ```
 

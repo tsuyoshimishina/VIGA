@@ -1,24 +1,21 @@
 # Requirements
 
-Conda environment setup for VIGA. Alternative to Docker-based deployment.
+Conda environment setup for VIGA.
 
 ## Quick Start
 
+The setup script creates all required conda environments (prefixed with `viga-`), generates `utils/_path.py`, and downloads model checkpoints:
+
 ```bash
-# 1. Create main agent environment
-conda create -n agent python=3.10 -y
-conda activate agent
-pip install -r requirements/requirement_agent.txt
+./setup.sh              # all environments
+./setup.sh agent blender  # specific environments only
+./setup.sh --check      # verify installations
+```
 
-# 2. Create tool environments (based on modes you need)
-# For 3D modes (BlenderGym, BlenderBench, Static/Dynamic Scene)
-conda create -n blender python=3.11 -y
-conda activate blender
-pip install -r requirements/requirement_blender.txt
+For SlideBench mode, create the pptx environment manually:
 
-# For SlideBench mode
-conda create -n pptx python=3.10 -y
-conda activate pptx
+```bash
+conda create -n viga-pptx python=3.10 -y && conda activate viga-pptx
 pip install -r requirements/requirement_pptx.txt
 ```
 
@@ -26,9 +23,12 @@ pip install -r requirements/requirement_pptx.txt
 
 | File | Environment | Python | Modes |
 |------|-------------|--------|-------|
-| `requirement_agent.txt` | agent | 3.10 | All (main runtime) |
-| `requirement_blender.txt` | blender | 3.11 | 3D modes |
-| `requirement_pptx.txt` | pptx | 3.10 | SlideBench |
+| `requirement_agent.txt` | viga-agent | 3.10 | All (main runtime) |
+| `requirement_blender.txt` | viga-blender | 3.11 | 3D modes |
+| `requirement_sam3d-objects.txt` | viga-sam3d-objects | 3.11 | SAM-3D with CUDA extensions |
+| `requirement_sam.txt` | viga-sam | 3.10 | Segment Anything (SAM) |
+| `requirement_sam3.txt` | viga-sam3 | 3.11 | SAM 3 |
+| `requirement_pptx.txt` | viga-pptx | 3.10 | SlideBench |
 | `requirement_eval-blender.txt` | eval-blender | 3.11 | 3D evaluation |
 | `requirement_eval-pptx.txt` | eval-pptx | 3.10 | Slides evaluation |
 
@@ -36,12 +36,12 @@ pip install -r requirements/requirement_pptx.txt
 
 ### Blender (for 3D modes)
 
+Blender is installed automatically by `./setup.sh` as part of the `viga-blender` environment. For manual installation:
+
 ```bash
-cd utils/third_party
-git clone https://github.com/princeton-vl/infinigen.git
-cd infinigen
-conda activate blender
-bash scripts/install/interactive_blender.sh
+cd utils/third_party/infinigen
+conda activate viga-blender
+INFINIGEN_MINIMAL_INSTALL=True bash scripts/install/interactive_blender.sh
 ```
 
 ### LibreOffice (for SlideBench)
@@ -52,43 +52,27 @@ sudo apt-get install -y libreoffice unoconv
 
 ## Configuration
 
-Create two config files in `utils/`:
+### API keys
 
-### `_api_keys.py`
+Set API keys as environment variables:
 
-```python
-OPENAI_API_KEY = "your-key"
-CLAUDE_API_KEY = "your-key"
-GEMINI_API_KEY = "your-key"
-MESHY_API_KEY = "your-key"
+```bash
+export OPENAI_API_KEY=sk-...
+export CLAUDE_API_KEY=sk-ant-...
+export MESHY_API_KEY=...
 ```
 
 ### `_path.py`
 
-```python
-path_to_cmd = {
-    "tools/blender/exec.py": "/path/to/conda/envs/blender/bin/python",
-    "tools/blender/investigator.py": "/path/to/conda/envs/blender/bin/python",
-    "tools/slides/exec.py": "/path/to/conda/envs/pptx/bin/python",
-}
-```
+`setup.sh` generates `utils/_path.py` automatically. To regenerate, delete the file and re-run `setup.sh`.
 
-Find your conda paths with `conda env list`.
+You can override the conda base path with the `VIGA_CONDA_BASE` environment variable.
 
 ## Verification
 
 ```bash
-# Test agent environment
-conda activate agent
-python -c "import openai; import mcp; print('OK')"
-
-# Test blender environment
-conda activate blender
-python -c "import bpy; print('OK')"
-
-# Test pptx environment
-conda activate pptx
-python -c "import pptx; print('OK')"
+./setup.sh --check              # all environments
+./setup.sh --check agent sam3   # specific environments only
 ```
 
 ## Troubleshooting
