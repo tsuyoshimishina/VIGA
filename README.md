@@ -115,10 +115,15 @@ export VA_API_KEY=...             # for Landing AI object detection (optional)
 
 ```bash
 conda activate viga-agent
-python runners/dynamic_scene.py --task=artist --model=gpt-5 --generator-tools=tools/blender/exec.py,tools/generator_base.py,tools/initialize_plan.py,tools/sam3d/init.py --prompt-setting=init
+
+# Static scene reconstruction (single task)
+python runners/static_scene.py --task <task-name> --model gpt-4o --prompt-setting get_asset --max-rounds 10
+
+# Static scene reconstruction (all tasks)
+python runners/static_scene.py --task all --model gpt-4o --prompt-setting get_asset --max-workers 8
 ```
 
-Custom data: place in `data/dynamic_scene/<your-data-name>` following the format in `data/dynamic_scene/artist`.
+Custom data: place in `data/static_scene/<task-name>/` with `target.png` and `description.txt`.
 
 ### 3D Asset Generation
 
