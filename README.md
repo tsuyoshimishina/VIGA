@@ -107,6 +107,8 @@ Set API keys as environment variables:
 ```bash
 export OPENAI_API_KEY=sk-...
 export CLAUDE_API_KEY=sk-ant-...
+export MESHY_API_KEY=...          # for 3D asset generation
+export VA_API_KEY=...             # for Landing AI object detection (optional)
 ```
 
 ## 2. Usage: Run the agent
@@ -117,6 +119,17 @@ python runners/dynamic_scene.py --task=artist --model=gpt-5 --generator-tools=to
 ```
 
 Custom data: place in `data/dynamic_scene/<your-data-name>` following the format in `data/dynamic_scene/artist`.
+
+### 3D Asset Generation
+
+VIGA supports two paths for generating 3D assets from images:
+
+| Path | Tools | Method |
+|------|-------|--------|
+| **Meshy (Image-to-3D)** | `tools/assets/meshy.py` | Landing AI crop → Meshy mesh generation → Meshy retexture (2-stage) |
+| **SAM3 Bridge** | `tools/sam3d/bridge.py` | SAM3 pixel-level segmentation → SAM3D local 3D reconstruction |
+
+The Meshy path uses a two-stage workflow: (1) mesh-only generation via Image-to-3D API, then (2) high-quality PBR texturing via Retexture API with the original image as style reference. Cost: 30 credits per asset (same as single-stage).
 
 <br>
 

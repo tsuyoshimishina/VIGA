@@ -50,7 +50,7 @@ class MeshyAPI:
             raise ValueError("Meshy API key is required. Set MESHY_API_KEY environment variable or pass api_key parameter.")
         self.base_url = "https://api.meshy.ai"
         self.headers = {"Authorization": f"Bearer {self.api_key}"}
-        self.save_dir = previous_assets_dir
+        self.save_dir = save_dir or previous_assets_dir
         self.previous_assets_dir = previous_assets_dir
         os.makedirs(self.save_dir, exist_ok=True)
         if self.previous_assets_dir:
@@ -236,6 +236,9 @@ class MeshyAPI:
     def create_image_to_3d_preview(self, image_path: str, prompt: Optional[str] = None, **kwargs: object) -> str:
         """Create an image-to-3D task from an input image.
 
+        Generates mesh only (no texture) by default. Use retexture API
+        separately for higher-quality texturing.
+
         Args:
             image_path: Path to the input image file.
             prompt: Optional text prompt to guide generation.
@@ -247,11 +250,17 @@ class MeshyAPI:
         url = f"{self.base_url}/openapi/v1/image-to-3d"
         with open(image_path, 'rb') as f:
             image_base64 = base64.b64encode(f.read()).decode('utf-8')
-            files = {'image_url': f"data:image/png;base64,{image_base64}", 'enable_pbr': True}
-            resp = requests.post(url, headers=self.headers, json=files)
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("result") or data.get("id")
+        payload = {
+            'image_url': f"data:image/png;base64,{image_base64}",
+            'should_texture': False,
+        }
+        if prompt:
+            payload['prompt'] = prompt
+        payload.update(kwargs or {})
+        resp = requests.post(url, headers=self.headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("result") or data.get("id")
 
     def poll_image_to_3d(self, task_id: str, interval_sec: float = 5.0, timeout_sec: int = 1800) -> Dict[str, object]:
         """Poll image-to-3D task until completion.
@@ -278,6 +287,65 @@ class MeshyAPI:
                 return js
             if time.time() > deadline:
                 raise TimeoutError(f"Meshy Image-to-3D task {task_id} polling timeout")
+            time.sleep(interval_sec)
+
+    def create_retexture_task(self, model_url: str, image_path: str, text_style_prompt: Optional[str] = None, **kwargs: object) -> str:
+        """Create a retexture task for a 3D model.
+
+        Applies high-quality PBR textures to an existing mesh using a
+        reference image for style guidance.
+
+        Args:
+            model_url: URL of the 3D model (GLB) to retexture.
+            image_path: Path to the reference image for texture style.
+            text_style_prompt: Optional text prompt for texture style.
+            **kwargs: Additional parameters for the API request.
+
+        Returns:
+            Task ID for the retexture operation.
+        """
+        url = f"{self.base_url}/openapi/v1/retexture"
+        with open(image_path, 'rb') as f:
+            image_base64 = base64.b64encode(f.read()).decode('utf-8')
+        payload = {
+            "model_url": model_url,
+            "image_style_url": f"data:image/png;base64,{image_base64}",
+            "enable_pbr": True,
+            "ai_model": "latest",
+        }
+        if text_style_prompt:
+            payload["text_style_prompt"] = text_style_prompt
+        payload.update(kwargs or {})
+        resp = requests.post(url, headers=self.headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("result") or data.get("id")
+
+    def poll_retexture_task(self, task_id: str, interval_sec: float = 5.0, timeout_sec: int = 1800) -> Dict[str, object]:
+        """Poll retexture task until completion.
+
+        Args:
+            task_id: ID of the task to poll.
+            interval_sec: Seconds between poll attempts.
+            timeout_sec: Maximum seconds to wait before timeout.
+
+        Returns:
+            Task result dictionary with retextured model URLs.
+
+        Raises:
+            TimeoutError: If task doesn't complete within timeout.
+        """
+        url = f"{self.base_url}/openapi/v1/retexture/{task_id}"
+        deadline = time.time() + timeout_sec
+        while True:
+            r = requests.get(url, headers=self.headers)
+            r.raise_for_status()
+            js = r.json()
+            status = js.get("status")
+            if status in ("SUCCEEDED", "FAILED", "CANCELED"):
+                return js
+            if time.time() > deadline:
+                raise TimeoutError(f"Meshy retexture task {task_id} polling timeout")
             time.sleep(interval_sec)
 
     def create_rigging_task(self, model_url: str) -> str:

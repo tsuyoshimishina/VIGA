@@ -162,7 +162,9 @@ class ExternalToolClient:
         handle = self.handles[server_path]
         result = await handle.call_tool(tool_name, tool_args)
         result = json.loads(result.content[0].text)
-        return result['output']
+        output = result['output']
+        output['status'] = result.get('status')
+        return output
 
     async def cleanup(self) -> None:
         """Clean up connections by stopping all MCP servers."""

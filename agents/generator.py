@@ -219,12 +219,12 @@ class GeneratorAgent:
 
         # Add downloaded assets
         if tool_call_name == "get_better_object":
-            try:
+            if message['user'].get('status') == 'success':
                 object_name = json.loads(message['assistant'].tool_calls[0].function.arguments)['object_name']
                 object_path = message['user']['text'][0].split('downloaded to: ')[1]
                 self.memory[1]['content'].append({"type": "text", "text": f"Downloaded {object_name} to {object_path}"})
-            except Exception as e:
-                print(f"Error adding downloaded assets: {e}")
+            else:
+                print(f"get_better_object failed: {message['user'].get('text', ['unknown error'])[0]}")
     
     def _save_memory(self) -> None:
         """Save the conversation memory to a JSON file in the output directory."""

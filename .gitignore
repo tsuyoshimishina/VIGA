@@ -9,6 +9,7 @@ _path.py
 *.json
 *.jsonl
 output
+data/static_scene/task-*
 .venv
 *.zip
 *.pt

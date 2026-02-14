@@ -108,9 +108,11 @@ def download_meshy_asset(object_name: str, description: str) -> Dict[str, object
 
 
 def download_meshy_asset_from_image(object_name: str, image_path: str, prompt: Optional[str] = None) -> Dict[str, object]:
-    """Download a Meshy image-to-3D asset.
+    """Download a Meshy image-to-3D asset using a two-stage workflow.
 
-    Generates a 3D model from an input image and downloads the GLB file.
+    Stage 1: Generate mesh only (no texture) via image-to-3D API.
+    Stage 2: Apply high-quality PBR texture via retexture API using the
+    original image as style reference.
 
     Args:
         object_name: Name for the downloaded asset file.
@@ -133,31 +135,47 @@ def download_meshy_asset_from_image(object_name: str, image_path: str, prompt: O
             logging.info(f"[Meshy] Using previous static asset from image: {previous_asset}")
             return {'status': 'success', 'output': {'path': previous_asset, 'model_url': None, 'from_cache': True}}
 
-        logging.info(f"[Meshy] Creating Image-to-3D preview task for: {image_path}")
+        # Step 1: Generate mesh only (no texture)
+        logging.info(f"[Meshy] Step 1: Creating mesh-only Image-to-3D task for: {image_path}")
         if prompt:
             logging.info(f"[Meshy] Using prompt: {prompt}")
 
         preview_id = _meshy_api.create_image_to_3d_preview(image_path, prompt)
         with open(f'{_meshy_api.save_dir}/meshy.log', 'a') as f:
-            f.write(f"Preview ID: {preview_id}\n")
+            f.write(f"Image-to-3D (mesh-only) ID: {preview_id}\n")
 
         preview_task = _meshy_api.poll_image_to_3d(preview_id, interval_sec=5, timeout_sec=900)
         if preview_task.get("status") != "SUCCEEDED":
-            return {"status": "error", "output": f"Image-to-3D preview failed: {preview_task.get('status')}"}
-        final_task = preview_task
+            return {"status": "error", "output": f"Image-to-3D mesh generation failed: {preview_task.get('status')}"}
 
-        model_urls = (final_task or {}).get("model_urls", {}) or {}
-        candidate_keys = ["glb"]
-        file_url = None
-        for k in candidate_keys:
-            if model_urls.get(k):
-                file_url = model_urls[k]
-                break
+        model_urls = (preview_task or {}).get("model_urls", {}) or {}
+        mesh_glb_url = model_urls.get("glb")
+        if not mesh_glb_url:
+            return {"status": "error", "output": "No GLB URL found after mesh generation"}
+
+        logging.info(f"[Meshy] Step 1 complete. Mesh GLB URL: {mesh_glb_url}")
+
+        # Step 2: Retexture the mesh using the original image as style reference
+        logging.info(f"[Meshy] Step 2: Creating retexture task with image reference: {image_path}")
+        retexture_id = _meshy_api.create_retexture_task(
+            model_url=mesh_glb_url,
+            image_path=image_path,
+            text_style_prompt=prompt,
+        )
+        with open(f'{_meshy_api.save_dir}/meshy.log', 'a') as f:
+            f.write(f"Retexture ID: {retexture_id}\n")
+
+        retexture_task = _meshy_api.poll_retexture_task(retexture_id, interval_sec=5, timeout_sec=1800)
+        if retexture_task.get("status") != "SUCCEEDED":
+            return {"status": "error", "output": f"Retexture failed: {retexture_task.get('status')}"}
+
+        retexture_model_urls = (retexture_task or {}).get("model_urls", {}) or {}
+        file_url = retexture_model_urls.get("glb")
         if not file_url:
-            return {"status": "error", "output": "No downloadable model_urls found"}
+            return {"status": "error", "output": "No GLB URL found after retexture"}
 
         result_path = _meshy_api.download_model_url(file_url, f"{object_name}.glb")
-        logging.info(f"[Meshy] Downloading Image-to-3D model to: {result_path}")
+        logging.info(f"[Meshy] Step 2 complete. Downloading retextured model to: {result_path}")
         return {'status': 'success', 'output': {'path': result_path, 'model_url': file_url}}
 
     except Exception as e:

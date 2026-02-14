@@ -123,6 +123,8 @@ class Executor:
             # Propagate render directory to scripts
             env["RENDER_DIR"] = str(run_dir)
             proc = subprocess.run(" ".join(cmd), shell=True, check=True, capture_output=True, text=True, env=env)
+            if proc.stderr:
+                logging.warning(f"Blender stderr: {proc.stderr[:500]}")
             imgs = sorted([str(p) for p in run_dir.glob("*") if p.suffix.lower() in [".png", ".jpg", ".jpeg"]])
             # If no image output
             if not os.path.exists(f"{self.base}/tmp/camera_info.json"):
@@ -260,7 +262,7 @@ class Investigator3D:
 
             # Update blender_background to the saved blend file
             if result.get("status") == "success":
-                if self.executor.blender_save:
+                if self.executor.blender_save and os.path.exists(self.executor.blender_save):
                     # Update the verifier base file
                     self.executor.blender_file = self.executor.blender_save
 
