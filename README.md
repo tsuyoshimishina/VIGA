@@ -60,7 +60,7 @@ You need [Conda](https://docs.conda.io/en/latest/miniconda.html) installed. For 
 ### Clone repository
 
 ```bash
-git clone https://github.com/Fugtemypt123/VIGA-release.git && cd VIGA-release
+git clone -b verify-feb-2026 https://github.com/tsuyoshimishina/VIGA.git && cd VIGA
 git submodule update --init --recursive
 # download sam module
 wget -P utils/third_party/sam https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
